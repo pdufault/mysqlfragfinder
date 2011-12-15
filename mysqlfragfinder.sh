@@ -99,7 +99,7 @@ for i in ${databases[@]}; do
 		for table in ${fragmented[@]}; do
 			let fraggedTables=$fraggedTables+1;
 			echo -ne "\tOptimizing $table ... ";
-			mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table $table" 2>"$log" >/dev/null
+			mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
 			if [[ $? -gt 0 ]]; then
 				echo "An error occured, check $log for more information."
 				exit 1;
