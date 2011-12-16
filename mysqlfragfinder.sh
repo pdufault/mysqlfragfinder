@@ -5,6 +5,7 @@
 
 VERSION="1.0.0"
 log="$PWD/mysql_error_log.txt"
+mysqlCmd="mysql"
 
 echo "MySQL fragmentation finder (and fixer) v$VERSION"
 echo "Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)"
@@ -15,6 +16,7 @@ showHelp() {
 	echo -e "\t--user username\tspecify mysql username to use\n\t\t\tusing this flag means the script will ask for a password during runtime, unless you supply..."
 	echo -e "\t--password \"yourpassword\""
 	echo -e "\t--host hostname\tspecify mysql hostname to use, be it local (default) or remote"
+	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
 }
 
 #s parse arguments
@@ -24,6 +26,7 @@ while [[ $1 == -* ]]; do
 		--user) mysqlUser="$2"; shift 2;;
 		--password) mysqlPass="$2"; shift 2;;
 		--host) mysqlHost="$2"; shift 2;;
+		--mysql) mysqlCmd="$2"; shift 2;;
 		--) shift; break;;
 	esac
 done
@@ -65,14 +68,14 @@ if [[ ! $mysqlPass ]]; then
 fi
 
 # Test connecting to the database:
-mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>&1
+"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>&1
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information.";
 	exit 1;
 fi
 
 # Retrieve the listing of databases:
-databases=( $(mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
+databases=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information."
 	exit 1;
@@ -81,7 +84,7 @@ fi
 echo -e "Found ${#databases[@]} databases";
 for i in ${databases[@]}; do
 	# get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
-	fragmented=( $(mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM $i;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB" | awk '$3 > 0' | awk '{print $1}') );
+	fragmented=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM $i;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB" | awk '$3 > 0' | awk '{print $1}') );
 	if [[ $? -gt 0 ]]; then
 		echo "An error occured, check $log for more information."
 		exit 1;
@@ -99,7 +102,7 @@ for i in ${databases[@]}; do
 		for table in ${fragmented[@]}; do
 			let fraggedTables=$fraggedTables+1;
 			echo -ne "\tOptimizing $table ... ";
-			mysql -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
+			"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
 			if [[ $? -gt 0 ]]; then
 				echo "An error occured, check $log for more information."
 				exit 1;
