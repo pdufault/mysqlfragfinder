@@ -31,7 +31,7 @@ while [[ $1 == -* ]]; do
 		--mysql) mysqlCmd="$2"; shift 2;;
 		--database) mysqlDb="$2"; shift 2;;
 		--check) mysqlCheck="1"; shift;;
-		--) shift; break;;
+		--*) shift; break;;
 	esac
 done
 
