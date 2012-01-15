@@ -17,6 +17,7 @@ showHelp() {
 	echo -e "\t--password \"yourpassword\""
 	echo -e "\t--host hostname\tspecify mysql hostname to use, be it local (default) or remote"
 	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
+	echo -e "\t--database\tuse specified database as target\n\t\t\tif this option is not used, all databases are targeted"
 	echo -e "\t--check\tonly shows fragmented tables, but do not optimize them"
 }
 
@@ -28,6 +29,7 @@ while [[ $1 == -* ]]; do
 		--password) mysqlPass="$2"; shift 2;;
 		--host) mysqlHost="$2"; shift 2;;
 		--mysql) mysqlCmd="$2"; shift 2;;
+		--database) mysqlDb="$2"; shift 2;;
 		--check) mysqlCheck="1"; shift;;
 		--) shift; break;;
 	esac
@@ -77,7 +79,11 @@ if [[ $? -gt 0 ]]; then
 fi
 
 # Retrieve the listing of databases:
-databases=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
+if [[ ! $mysqlDb ]]; then
+	databases=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
+else
+	databases=( $mysqlDb );
+fi
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information."
 	exit 1;
