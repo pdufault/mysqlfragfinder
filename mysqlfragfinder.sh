@@ -17,6 +17,7 @@ showHelp() {
 	echo -e "\t--password \"yourpassword\""
 	echo -e "\t--host hostname\tspecify mysql hostname to use, be it local (default) or remote"
 	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
+	echo -e "\t--check\tonly shows fragmented tables, but do not optimize them"
 }
 
 #s parse arguments
@@ -27,6 +28,7 @@ while [[ $1 == -* ]]; do
 		--password) mysqlPass="$2"; shift 2;;
 		--host) mysqlHost="$2"; shift 2;;
 		--mysql) mysqlCmd="$2"; shift 2;;
+		--check) mysqlCheck="1"; shift;;
 		--) shift; break;;
 	esac
 done
@@ -99,16 +101,19 @@ for i in ${databases[@]}; do
 				echo "found ${#fragmented[@]} fragmented table."
 			fi
 		fi
-		for table in ${fragmented[@]}; do
-			let fraggedTables=$fraggedTables+1;
-			echo -ne "\tOptimizing $table ... ";
-			"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
-			if [[ $? -gt 0 ]]; then
-				echo "An error occured, check $log for more information."
-				exit 1;
-			fi
-			echo done
-		done
+		# only optimize tables if check option is disabled
+		if [[ ! $mysqlCheck ]]; then
+			for table in ${fragmented[@]}; do
+				let fraggedTables=$fraggedTables+1;
+				echo -ne "\tOptimizing $table ... ";
+				"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
+				if [[ $? -gt 0 ]]; then
+					echo "An error occured, check $log for more information."
+					exit 1;
+				fi
+				echo done
+			done
+		fi
 	else
 		tput rc
 		tput el
@@ -117,7 +122,9 @@ for i in ${databases[@]}; do
 done
 
 # footer message
-if [[ ! $fraggedTables -gt 0 ]]; then
+if [[ $mysqlCheck ]]; then
+	echo "Check option was enabled, so no optimizing was done.";
+elif [[ ! $fraggedTables -gt 0 ]]; then
 	echo "No tables were fragmented, so no optimizing was done.";
 else
 	if [[ $fraggedTables -gt 1 ]]; then
