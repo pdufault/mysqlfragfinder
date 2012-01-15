@@ -19,6 +19,7 @@ showHelp() {
 	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
 	echo -e "\t--database\tuse specified database as target\n\t\t\tif this option is not used, all databases are targeted"
 	echo -e "\t--check\tonly shows fragmented tables, but do not optimize them"
+	echo -e "\t--detail\tadditionally display fragmented tables"
 }
 
 #s parse arguments
@@ -31,6 +32,7 @@ while [[ $1 == -* ]]; do
 		--mysql) mysqlCmd="$2"; shift 2;;
 		--database) mysqlDb="$2"; shift 2;;
 		--check) mysqlCheck="1"; shift;;
+		--detail) mysqlDetail="1"; shift;;
 		--*) shift; break;;
 	esac
 done
@@ -105,6 +107,11 @@ for i in ${databases[@]}; do
 				echo "found ${#fragmented[@]} fragmented tables."
 			else
 				echo "found ${#fragmented[@]} fragmented table."
+			fi
+			if [[ $mysqlDetail ]]; then
+				for table in ${fragmented[@]}; do
+					echo -ne "\t$table\n";
+				done
 			fi
 		fi
 		# only optimize tables if check option is disabled
