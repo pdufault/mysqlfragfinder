@@ -94,7 +94,7 @@ fi
 echo -e "Found ${#databases[@]} databases";
 for i in ${databases[@]}; do
 	# get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
-	fragmented=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM $i;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB" | awk '$3 > 0' | awk '{print $1}') );
+	fragmented=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}') );
 	if [[ $? -gt 0 ]]; then
 		echo "An error occured, check $log for more information."
 		exit 1;
