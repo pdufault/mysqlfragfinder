@@ -1,154 +1,148 @@
-#!/bin/bash
-# Phil Dufault (2009)
-# bumped to v1 (2011)
-# phil@dufault.info
+#!/bin/sh
 
-VERSION="1.0.0"
-log="$PWD/mysql_error_log.txt"
-mysqlCmd="mysql"
+#-
+# Copyright (c) 2009-2011 Phil Dufault <phil@dufault.info>
+# Copyright (c) 2012 Daniel Gerzo <danger@FreeBSd.org>
+# All rights reserved
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted providing that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+# IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
-echo "MySQL fragmentation finder (and fixer) v$VERSION"
-echo "Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)"
+VERSION="2.0"
+_frag_flag="0"
 
-showHelp() {
-	echo -e "\tThis script only repairs MyISAM and InnoDB tables"
-	echo -e "\t--help or -h\t\tthis menu"
-	echo -e "\t--user username\tspecify mysql username to use\n\t\t\tusing this flag means the script will ask for a password during runtime, unless you supply..."
-	echo -e "\t--password \"yourpassword\""
-	echo -e "\t--host hostname\tspecify mysql hostname to use, be it local (default) or remote"
-	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
-	echo -e "\t--database\tuse specified database as target\n\t\t\tif this option is not used, all databases are targeted"
-	echo -e "\t--check\tonly shows fragmented tables, but do not optimize them"
-	echo -e "\t--detail\tadditionally display fragmented tables"
+# some defaults
+mysqlOptimize=${mysqlOptimize:-"0"}
+log=${log:-"/root/mysql_error_log.txt"}
+
+usage() {
+	cat <<EOF
+MySQL fragmentation finder (and fixer) v$VERSION
+This script only repairs MyISAM, InnoDB and Aria tables.
+
+usage: `basename $0` [options]
+
+Options:
+	--help or -h	Print the usage message (i.e. this)
+	--user username	Specify mysql username to use
+			using this flag means the script will ask for a password during runtime, unless you supply...
+	--password pwd	Specify the password for the given mysql username
+			If not provided, the script will ask during its execution
+	--host hostname	Specify mysql hostname to use, be it local (default) or remote
+	--mysql cmd	Specify mysql command name, the default is mysql
+	--database db	Use the specified database as target
+			If this option is not used, all databases are targeted
+	--log path	Store the logs in the specified file, the default is $log
+	--optimize	Optimize the fragmented tables
+EOF
 }
 
-#s parse arguments
-while [[ $1 == -* ]]; do
+# prevent overwriting the commandline args with the ones in .my.cnf, and check that .my.cnf exists
+if [ -z "$mysqlUser" -a -f "$HOME/.my.cnf" ]; then
+	mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
+	mysqlPass=$(grep pass= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
+	mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
+fi
+
+# parse arguments
+while [ $# -gt 0 ]; do
 	case "$1" in
-		--help|-h) showHelp; exit 0;;
-		--user) mysqlUser="$2"; shift 2;;
-		--password) mysqlPass="$2"; shift 2;;
-		--host) mysqlHost="$2"; shift 2;;
-		--mysql) mysqlCmd="$2"; shift 2;;
-		--database) mysqlDb="$2"; shift 2;;
-		--check) mysqlCheck="1"; shift;;
-		--detail) mysqlDetail="1"; shift;;
-		--*) shift; break;;
+		--help|-h) usage; exit 0;;
+		--user|-u) mysqlUser="$2"; shift 2;;
+		--password|-p) mysqlPass="$2"; shift 2;;
+		--host|-h) mysqlHost="$2"; shift 2;;
+		--mysql|-m) mysqlCmd="$2"; shift 2;;
+		--database|-d) mysqlDb="$2"; shift 2;;
+		--log|-l) log="$2"; shift 2;;
+		--optimize|-o) mysqlOptimize="1"; shift;;
+		--*|-*) shift; break;;
 	esac
 done
 
-# prevent overwriting the commandline args with the ones in .my.cnf, and check that .my.cnf exists
-if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
-	if grep "user=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-		if grep "pass=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-			mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			mysqlPass=$(grep pass= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			if grep "host=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-				mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			fi
-		else
-			echo "Found no pass line in your .my.cnf,, fix this or specify with --password"
-		fi
-	else
-		echo "Found no user line in your .my.cnf, fix this or specify with --user"
-		exit 1;
-	fi
-fi
+# set defaults
+mysqlCmd=${mysqlCmd:-"mysql"}
+mysqlUser=${mysqlUser:-"root"}
+mysqlHost=${mysqlHost:-"localhost"}
 
-# set localhost if no host is set anywhere else
-if [[ ! $mysqlHost ]]; then
-	mysqlHost="127.0.0.1"
-fi
-
-# error out
-if [[ ! $mysqlUser ]]; then
-	echo "Authentication information not found as arguments, nor in $HOME/.my.cnf"
-	echo
-	showHelp
-	exit 1
-fi
-
-if [[ ! $mysqlPass ]]; then
+if [ -z $mysqlPass ]; then
 	echo -n "Enter your MySQL password: "
-	read -s mysqlPass
+	read mysqlPass
 fi
 
 # Test connecting to the database:
-"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>&1
-if [[ $? -gt 0 ]]; then
+"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW STATUS" > /dev/null 2> "$log"
+if [ $? -gt 0 ]; then
 	echo "An error occured, check $log for more information.";
 	exit 1;
 fi
 
-# Retrieve the listing of databases:
-if [[ ! $mysqlDb ]]; then
-	databases=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
+# Retrieve the list of databases:
+if [ ! $mysqlDb ]; then
+	databases=$("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW DATABASES;" 2>"$log")
 else
-	databases=( $mysqlDb );
+	databases=$mysqlDb;
 fi
-if [[ $? -gt 0 ]]; then
+if [ $? -gt 0 ]; then
 	echo "An error occured, check $log for more information."
 	exit 1;
 fi
 
-echo -e "Found ${#databases[@]} databases";
-for i in ${databases[@]}; do
+count=$(echo $databases | wc -w | tr -d '[:space:]')
+echo "Found ${count} databases";
+for i in ${databases}; do
 	# get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
-	fragmented=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}') );
-	if [[ $? -gt 0 ]]; then
+	fragmented=$("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '$2 ~ /MyISAM|InnoDB|Aria/ {if ($10>0) print $1}')
+	if [ $? -gt 0 ]; then
 		echo "An error occured, check $log for more information."
 		exit 1;
 	fi
-	tput sc
-	echo -n "Checking $i ... ";
-	if [[ ${#fragmented[@]} -gt 0 ]]; then
-		if [[ ${#fragmented[@]} -gt 0 ]]; then
-			if [[ ${#fragmented[@]} -gt 1 ]]; then
-				echo "found ${#fragmented[@]} fragmented tables."
-			else
-				echo "found ${#fragmented[@]} fragmented table."
-			fi
-			if [[ $mysqlDetail ]]; then
-				for table in ${fragmented[@]}; do
-					echo -ne "\t$table\n";
-				done
-			fi
-		fi
-		# only optimize tables if check option is disabled
-		if [[ ! $mysqlCheck ]]; then
-			for table in ${fragmented[@]}; do
-				let fraggedTables=$fraggedTables+1;
-				echo -ne "\tOptimizing $table ... ";
-				"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
-				if [[ $? -gt 0 ]]; then
+	echo "Checking $i ... ";
+	if [ ! -z "${fragmented}" ]; then
+		_frag_flag="1"
+		echo "The following tables are fragmented:"
+		for table in ${fragmented}; do
+			echo -e "\t$table";
+		done
+
+		# only optimize tables if optimize option is enabled
+		if [ $mysqlOptimize -eq "1" ]; then
+			for table in ${fragmented}; do
+				printf "\tOptimizing $table ... ";
+				"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "OPTIMIZE TABLE \`$table\`" 2>"$log" >/dev/null
+				if [ $? -gt 0 ]; then
 					echo "An error occured, check $log for more information."
 					exit 1;
 				fi
 				echo done
 			done
 		fi
-	else
-		tput rc
-		tput el
 	fi
-	unset fragmented
 done
 
 # footer message
-if [[ $mysqlCheck ]]; then
-	echo "Check option was enabled, so no optimizing was done.";
-elif [[ ! $fraggedTables -gt 0 ]]; then
+echo
+if [ $_frag_flag -eq "1" -a $mysqlOptimize -eq "0" ]; then
+	echo "Optimize option was disabled, so no optimization was done.";
+elif [ $_frag_flag -eq "0" ]; then
 	echo "No tables were fragmented, so no optimizing was done.";
 else
-	if [[ $fraggedTables -gt 1 ]]; then
-		echo "$fraggedTables tables were fragmented, and were optimized.";
-	else
-		echo "$fraggedTables table was fragmented, and was optimized.";
-	fi
+	echo "Tables were successfully optimized.";
 fi
-
-if [[ ! -s $log ]]; then
-	rm -f "$log"
-fi
-
-unset fraggedTables
