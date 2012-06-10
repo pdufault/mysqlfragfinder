@@ -2,7 +2,7 @@
 
 #-
 # Copyright (c) 2009-2011 Phil Dufault <phil@dufault.info>
-# Copyright (c) 2012 Daniel Gerzo <danger@FreeBSd.org>
+# Copyright (c) 2012 Daniel Gerzo <danger@FreeBSD.org>
 # All rights reserved
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,10 @@
 VERSION="2.0"
 _frag_flag="0"
 
-# some defaults
+# set the defaults
+mysqlCmd=${mysqlCmd:-"mysql"}
+mysqlUser=${mysqlUser:-"root"}
+mysqlHost=${mysqlHost:-"localhost"}
 mysqlOptimize=${mysqlOptimize:-"0"}
 log=${log:-"/root/mysql_error_log.txt"}
 
@@ -76,11 +79,6 @@ while [ $# -gt 0 ]; do
 		--*|-*) shift; break;;
 	esac
 done
-
-# set defaults
-mysqlCmd=${mysqlCmd:-"mysql"}
-mysqlUser=${mysqlUser:-"root"}
-mysqlHost=${mysqlHost:-"localhost"}
 
 if [ -z $mysqlPass ]; then
 	echo -n "Enter your MySQL password: "
