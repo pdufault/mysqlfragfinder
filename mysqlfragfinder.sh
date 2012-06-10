@@ -58,7 +58,7 @@ EOF
 # prevent overwriting the commandline args with the ones in .my.cnf, and check that .my.cnf exists
 if [ -z "$mysqlUser" -a -f "$HOME/.my.cnf" ]; then
 	mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
-	mysqlPass=$(grep pass= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
+	mysqlPass=$(grep -E 'pass(word)?=' < "$HOME/.my.cnf" | awk -F\= '{print $2}');
 	mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\= '{print $2}');
 fi
 
