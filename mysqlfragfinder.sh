@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Phil Dufault (2009)
 # bumped to v1 (2011)
 # phil@dufault.info
