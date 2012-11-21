@@ -40,9 +40,9 @@ done
 # prevent overwriting the commandline args with the ones in .my.cnf, and check that .my.cnf exists
 if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
 	if grep "user=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-		if grep "pass=" "$HOME/.my.cnf" >/dev/null 2>&1; then
+		if grep "password=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 			mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			mysqlPass=$(grep pass= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
+			mysqlpassword=$(grep password= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			if grep "host=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 				mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			fi
