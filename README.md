@@ -3,6 +3,7 @@ mysqlfragfinder
 
 finds your fragmented tables...and defragments them
 
+```
 me@host:~/src/mysqlfragfinder $ ./mysqlfragfinder.sh
 MySQL fragmentation finder (and fixer) v1.0.0
 Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)
@@ -19,3 +20,4 @@ Authentication information not found as arguments, nor in .my.cnf
                         if this option is not used, all databases are targeted
         --check only shows fragmented tables, but do not optimize them
         --detail        additionally display fragmented tables
+```
