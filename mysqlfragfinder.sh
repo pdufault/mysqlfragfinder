@@ -74,7 +74,7 @@ if [[ ! $mysqlPass ]]; then
 fi
 
 # Test connecting to the database:
-"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>&1
+"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>"$log"
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information.";
 	exit 1;
