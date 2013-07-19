@@ -3,7 +3,7 @@
 # bumped to v1 (2011)
 # phil@dufault.info
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 log="$PWD/mysql_error_log.txt"
 mysqlCmd="mysql"
 
