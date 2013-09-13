@@ -42,7 +42,7 @@ if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
 	if grep "user=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 		if grep "password=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 			mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			mysqlpassword=$(grep password= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
+			mysqlPass=$(grep password= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			if grep "host=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 				mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			fi
