@@ -5,7 +5,7 @@ finds your fragmented tables...and defragments them
 
 ```
 me@host:~/src/mysqlfragfinder $ ./mysqlfragfinder.sh
-MySQL fragmentation finder (and fixer) v1.0.1
+MySQL fragmentation finder (and fixer) v1.0.2
 Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)
 Authentication information not found as arguments, nor in .my.cnf
 
