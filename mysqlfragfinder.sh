@@ -12,14 +12,14 @@ echo "Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)"
 
 showHelp() {
 	echo -e "\tThis script only repairs MyISAM and InnoDB tables"
-	echo -e "\t--help or -h\t\tthis menu"
-	echo -e "\t--user username\tspecify mysql username to use\n\t\t\tusing this flag means the script will ask for a password during runtime, unless you supply..."
-	echo -e "\t--password \"yourpassword\""
-	echo -e "\t--host hostname\tspecify mysql hostname to use, be it local (default) or remote"
-	echo -e "\t--mysql command\tspecify mysql command name, default is mysql"
-	echo -e "\t--database\tuse specified database as target\n\t\t\tif this option is not used, all databases are targeted"
-	echo -e "\t--check\tonly shows fragmented tables, but do not optimize them"
-	echo -e "\t--detail\tadditionally display fragmented tables"
+	echo -e "\t--help -h\t\tthis menu"
+	echo -e "\t--user username\t\tspecify mysql username to use, the script will prompt for a password during runtime, unless you supply a password"
+	echo -e "\t--password \"yourpass\""
+	echo -e "\t--host hostname\t\tspecify mysql hostname to use, be it local (default) or remote"
+	echo -e "\t--mysql command\t\tspecify mysql command name, default is mysql"
+	echo -e "\t--database\t\tuse specified database as target\n\t\t\t\tif this option is not used, all databases are targeted"
+	echo -e "\t--check\t\t\tonly shows fragmented tables, but do not optimize them"
+	echo -e "\t--detail\t\tadditionally display fragmented tables"
 }
 
 # Parse arguments
