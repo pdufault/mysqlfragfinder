@@ -41,10 +41,10 @@ done
 if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
 	if grep "user=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 		if grep "password=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-			mysqlUser=$(grep user= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
-			mysqlPass=$(grep password= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
+			mysqlUser=$(grep user= "$HOME/.my.cnf" | awk -F\" '{print $2}');
+			mysqlPass=$(grep password= "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			if grep "host=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-				mysqlHost=$(grep host= < "$HOME/.my.cnf" | awk -F\" '{print $2}');
+				mysqlHost=$(grep host= "$HOME/.my.cnf" | awk -F\" '{print $2}');
 			fi
 		else
 			echo "Found no pass line in your .my.cnf,, fix this or specify with --password"
@@ -55,12 +55,12 @@ if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
 	fi
 fi
 
-# set localhost if no host is set anywhere else
+# Set localhost if no host is set anywhere else
 if [[ ! $mysqlHost ]]; then
 	mysqlHost="127.0.0.1"
 fi
 
-# error out
+# Error out if no auth details are found for the user
 if [[ ! $mysqlUser ]]; then
 	echo "Authentication information not found as arguments, nor in $HOME/.my.cnf"
 	echo
@@ -74,7 +74,7 @@ if [[ ! $mysqlPass ]]; then
 fi
 
 # Test connecting to the database:
-"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>"$log"
+"$mysqlCmd" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show status" >/dev/null 2>"$log"
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information.";
 	exit 1;
@@ -82,9 +82,9 @@ fi
 
 # Retrieve the listing of databases:
 if [[ ! $mysqlDb ]]; then
-	databases=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log") );
+	databases=($("$mysqlCmd" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "show databases;" 2>"$log"));
 else
-	databases=( $mysqlDb );
+	databases=($mysqlDb);
 fi
 if [[ $? -gt 0 ]]; then
 	echo "An error occured, check $log for more information."
@@ -93,13 +93,14 @@ fi
 
 echo -e "Found ${#databases[@]} databases";
 for i in ${databases[@]}; do
-	# get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
-	fragmented=( $("${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}') );
+	# Get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
+	fragmented=($("$mysqlCmd" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}'));
 	if [[ $? -gt 0 ]]; then
 		echo "An error occured, check $log for more information."
 		exit 1;
 	fi
 	tput sc
+
 	echo -n "Checking $i ... ";
 	if [[ ${#fragmented[@]} -gt 0 ]]; then
 		if [[ ${#fragmented[@]} -gt 0 ]]; then
@@ -114,12 +115,13 @@ for i in ${databases[@]}; do
 				done
 			fi
 		fi
-		# only optimize tables if check option is disabled
+
+		# Only optimize tables if check option is disabled
 		if [[ ! $mysqlCheck ]]; then
 			for table in ${fragmented[@]}; do
 				let fraggedTables=$fraggedTables+1;
 				echo -ne "\tOptimizing $table ... ";
-				"${mysqlCmd}" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
+				"$mysqlCmd" -u"$mysqlUser" -p"$mysqlPass" -h"$mysqlHost" -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
 				if [[ $? -gt 0 ]]; then
 					echo "An error occured, check $log for more information."
 					exit 1;
@@ -134,7 +136,7 @@ for i in ${databases[@]}; do
 	unset fragmented
 done
 
-# footer message
+# Footer message
 if [[ $mysqlCheck ]]; then
 	echo "Check option was enabled, so no optimizing was done.";
 elif [[ ! $fraggedTables -gt 0 ]]; then
