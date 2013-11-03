@@ -33,7 +33,7 @@ while [[ $1 == -* ]]; do
 		--check)    mysqlCheck="1"; shift;;
 		--detail)  mysqlDetail="1"; shift;;
 		--help|-h)        showHelp; exit 0;;
-		--*) shift; break;;
+		--*)                 shift; break;;
 	esac
 done
 
