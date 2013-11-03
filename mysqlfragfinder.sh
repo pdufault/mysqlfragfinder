@@ -22,17 +22,17 @@ showHelp() {
 	echo -e "\t--detail\tadditionally display fragmented tables"
 }
 
-#s parse arguments
+# Parse arguments
 while [[ $1 == -* ]]; do
 	case "$1" in
-		--help|-h) showHelp; exit 0;;
-		--user) mysqlUser="$2"; shift 2;;
+		--user)     mysqlUser="$2"; shift 2;;
 		--password) mysqlPass="$2"; shift 2;;
-		--host) mysqlHost="$2"; shift 2;;
-		--mysql) mysqlCmd="$2"; shift 2;;
-		--database) mysqlDb="$2"; shift 2;;
-		--check) mysqlCheck="1"; shift;;
-		--detail) mysqlDetail="1"; shift;;
+		--host)     mysqlHost="$2"; shift 2;;
+		--mysql)     mysqlCmd="$2"; shift 2;;
+		--database)   mysqlDb="$2"; shift 2;;
+		--check)    mysqlCheck="1"; shift;;
+		--detail)  mysqlDetail="1"; shift;;
+		--help|-h)        showHelp; exit 0;;
 		--*) shift; break;;
 	esac
 done
