@@ -4,7 +4,6 @@
 # phil@dufault.info
 
 VERSION="1.0.2"
-log="$PWD/mysql_error_log.txt"
 mysqlCmd="mysql"
 
 echo "MySQL fragmentation finder (and fixer) v$VERSION"
@@ -18,6 +17,7 @@ showHelp() {
 	echo -e "\t--host hostname\t\tspecify mysql hostname to use, be it local (default) or remote"
 	echo -e "\t--mysql command\t\tspecify mysql command name, default is mysql"
 	echo -e "\t--database\t\tuse specified database as target\n\t\t\t\tif this option is not used, all databases are targeted"
+	echo -e "\t--log\t\t\tset a custom log. Default value is $PWD/mysqlfragfinder.log"
 	echo -e "\t--check\t\t\tonly shows fragmented tables, but do not optimize them"
 	echo -e "\t--detail\t\tadditionally display fragmented tables"
 }
@@ -28,14 +28,21 @@ while [[ $1 == -* ]]; do
 		--user)     mysqlUser="$2"; shift 2;;
 		--password) mysqlPass="$2"; shift 2;;
 		--host)     mysqlHost="$2"; shift 2;;
-		--mysql)     mysqlCmd="$2"; shift 2;;
-		--database)   mysqlDb="$2"; shift 2;;
+		--mysql)    mysqlCmd="$2"; shift 2;;
+		--database) mysqlDb="$2"; shift 2;;
+		--log)      log="$2"; shift 2;;
 		--check)    mysqlCheck="1"; shift;;
-		--detail)  mysqlDetail="1"; shift;;
-		--help|-h)        showHelp; exit 0;;
-		--*)                 shift; break;;
+		--detail)   mysqlDetail="1"; shift;;
+		--help|-h)  showHelp; exit 0;;
+		--*)        shift; break;;
 	esac
 done
+
+
+# Set localhost if no host is set anywhere else
+if [[ ! $log ]]; then
+	log="$PWD/mysqlfragfinder.log"
+fi
 
 # prevent overwriting the commandline args with the ones in .my.cnf, and check that .my.cnf exists
 if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
