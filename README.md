@@ -16,6 +16,7 @@ Written by Phil Dufault (phil@dufault.info, http://www.dufault.info)
         --mysql command         specify mysql command name, default is mysql
         --database              use specified database as target
                                 if this option is not used, all databases are targeted
+        --log                   set a custom log. Default value is $PWD/mysqlfragfinder.log"
         --check                 only shows fragmented tables, but do not optimize them
         --detail                additionally display fragmented tables
 
