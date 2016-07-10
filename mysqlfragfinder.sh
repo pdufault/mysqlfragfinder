@@ -107,55 +107,57 @@ fi
 echo -e "Found ${#databases[@]} databases";
 
 for i in ${databases[@]}; do
-	# Get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
-	fragmented=($($mysqlCmd --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}'));
-
-	if [[ $? -gt 0 ]]; then
-		echo "An error occured, check $log for more information."
-		exit 1;
-	fi
-
-	tput sc
-
-	echo ""
-	echo -n "Checking $i ... ";
-
-	if [[ ${#fragmented[@]} -gt 0 ]]; then
+	if [[ $i != 'information_schema' ]]; then
+		# Get a list of all of the tables, grep for MyISAM or InnoDB, and then sort out the fragmented tables with awk
+		fragmented=($($mysqlCmd --skip-column-names --batch -e "SHOW TABLE STATUS FROM \`$i\`;" 2>"$log" | awk '{print $1,$2,$10}' | egrep "MyISAM|InnoDB|Aria" | awk '$3 > 0' | awk '{print $1}'));
+	
+		if [[ $? -gt 0 ]]; then
+			echo "An error occured, check $log for more information."
+			exit 1;
+		fi
+	
+		tput sc
+	
+		echo ""
+		echo -n "Checking $i ... ";
+	
 		if [[ ${#fragmented[@]} -gt 0 ]]; then
-			if [[ ${#fragmented[@]} -gt 1 ]]; then
-				echo "found ${#fragmented[@]} fragmented tables."
-			else
-				echo "found ${#fragmented[@]} fragmented table."
+			if [[ ${#fragmented[@]} -gt 0 ]]; then
+				if [[ ${#fragmented[@]} -gt 1 ]]; then
+					echo "found ${#fragmented[@]} fragmented tables."
+				else
+					echo "found ${#fragmented[@]} fragmented table."
+				fi
+	
+				if [[ $mysqlDetail ]]; then
+					for table in ${fragmented[@]}; do
+						echo -ne "\t$table\n";
+					done
+				fi
 			fi
-
-			if [[ $mysqlDetail ]]; then
+	
+			# Only optimize tables if check option is disabled
+			if [[ ! $mysqlCheck ]]; then
 				for table in ${fragmented[@]}; do
-					echo -ne "\t$table\n";
+					let fraggedTables=$fraggedTables+1;
+					echo -ne "\tOptimizing $table ... ";
+	
+					$mysqlCmd -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
+	
+					if [[ $? -gt 0 ]]; then
+						echo "An error occured, check $log for more information."
+						exit 1;
+					fi
+					echo done
 				done
 			fi
+		else
+			tput rc
+			tput el
 		fi
-
-		# Only optimize tables if check option is disabled
-		if [[ ! $mysqlCheck ]]; then
-			for table in ${fragmented[@]}; do
-				let fraggedTables=$fraggedTables+1;
-				echo -ne "\tOptimizing $table ... ";
-
-				$mysqlCmd -D "$i" --skip-column-names --batch -e "optimize table \`$table\`" 2>"$log" >/dev/null
-
-				if [[ $? -gt 0 ]]; then
-					echo "An error occured, check $log for more information."
-					exit 1;
-				fi
-				echo done
-			done
-		fi
-	else
-		tput rc
-		tput el
+	
+		unset fragmented
 	fi
-
-	unset fragmented
 done
 
 echo ""
