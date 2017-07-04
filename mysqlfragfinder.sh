@@ -49,11 +49,11 @@ fi
 if [[ ! $mysqlUser  && -f "$HOME/.my.cnf" ]]; then
 	if grep "user=" "$HOME/.my.cnf" >/dev/null 2>&1; then
 		if grep "password=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-			mysqlUser=$(grep -m 1 "user=" "$HOME/.my.cnf" | sed -e 's/^[^=]\+=//g');
-			mysqlPass=$(grep -m 1 "password=" "$HOME/.my.cnf" | sed -e 's/^[^=]\+=//g');
+			mysqlUser=$(grep "user=" "$HOME/.my.cnf" | awk -F= 'NR==1{print $NF}');
+			mysqlPass=$(grep "password=" "$HOME/.my.cnf" | awk -F= 'NR==1{print $NF}');
 
 			if grep "host=" "$HOME/.my.cnf" >/dev/null 2>&1; then
-				mysqlHost=$(grep -m 1 "host=" "$HOME/.my.cnf" | sed -e 's/^[^=]\+=//g');
+				mysqlHost=$(grep "host=" "$HOME/.my.cnf" | awk -F= 'NR==1{print $NF}');
 			fi
 		else
 			echo "Found no pass line in your .my.cnf,, fix this or specify with --password"
